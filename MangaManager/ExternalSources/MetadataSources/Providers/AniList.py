@@ -36,7 +36,7 @@ class AniList(IMetadataSource):
     person_mapper = {}
     _HOW_METADATA_MAPS_TOOLTIP = "How metadata field will map to ComicInfo fields"
     romaji_as_series = Settings().get(name, AniListSetting.SeriesTitleLanguage)
-
+    
     def init_settings(self):
         self.settings = [
             SettingSection(self.name, self.name, [
@@ -70,6 +70,56 @@ class AniList(IMetadataSource):
         ]
         super().init_settings()
 
+    def save_settings(self):
+        self.romaji_as_series = Settings().get(self.name, AniListSetting.SeriesTitleLanguage)
+        self.person_mapper["Original Story"] = Settings().get(self.name, AniListPerson.OriginalStory).split(',')
+        self.person_mapper["Original Creator"] = Settings().get(self.name, AniListPerson.OriginalStory).split(',')
+        self.person_mapper["Character Design"] = Settings().get(self.name, AniListPerson.CharacterDesign).split(',')
+        self.person_mapper["Story"] = Settings().get(self.name, AniListPerson.Story).split(',')
+        self.person_mapper["Art"] = Settings().get(self.name, AniListPerson.Art).split(',')
+        self.person_mapper["Story & Art"] = Settings().get(self.name, AniListPerson.Story).split(',') + Settings().get(
+            self.name, AniListPerson.Art).split(',')
+        self.person_mapper["Assistant"] = Settings().get(self.name, AniListPerson.Assistant).split(',')
+
+    def get_cinfo(self, comic_info_from_ui: ComicInfo) -> ComicInfo | None:
+        comicinfo = ComicInfo()
+        serie_id = self._get_id_from_series(comic_info_from_ui)
+        if serie_id is None:
+            return None
+        data = self._search_details_by_series_id(serie_id, "MANGA", {})
+
+        startdate = data.get("startDate")
+        comicinfo.day = startdate.get("day")
+        comicinfo.month = startdate.get("month")
+        comicinfo.year = startdate.get("year")
+        comicinfo.genre = ", ".join(data.get("genres")).strip()
+        comicinfo.web = data.get("siteUrl").strip()
+        if data.get("volumes"):
+            comicinfo.count = data.get("volumes")
+
+        # Title (Series & LocalizedSeries)
+        title = data.get("title")
+        self._log.info("[AniList] Fetch Data found title " + str(title) + " for " + comic_info_from_ui.series)
+        title_english = (data.get("title").get("english") or "").strip()
+        title_romaji = (data.get("title").get("romaji") or "").strip()
+        if self.romaji_as_series:
+            comicinfo.series = title_romaji
+            if title_romaji != title_english:
+                comicinfo.localized_series = title_english
+        else:
+            comicinfo.series = title_english if title_english != "" else title_romaji
+            if title_romaji != title_english:
+                comicinfo.localized_series = title_romaji
+
+        # Summary
+        comicinfo.summary = IMetadataSource.clean_description(data.get("description"), remove_source=True)
+
+        # People
+        self.update_people_from_mapping(data["staff"]["edges"], self.person_mapper, comicinfo,
+                                       lambda item: item["node"]["name"]["full"],
+                                       lambda item: item["role"])
+
+        return comicinfo
     @staticmethod
     def is_valid_person_tag(key, value):
         invalid_people = get_invalid_person_tag(value)
@@ -84,17 +134,7 @@ class AniList(IMetadataSource):
         if match:
             return match.group(1)
         return None
-    @classmethod
-    def save_settings(cls):
-        cls.romaji_as_series = Settings().get(cls.name, AniListSetting.SeriesTitleLanguage)
-        cls.person_mapper["Original Story"] = Settings().get(cls.name, AniListPerson.OriginalStory).split(',')
-        cls.person_mapper["Original Creator"] = Settings().get(cls.name, AniListPerson.OriginalStory).split(',')
-        cls.person_mapper["Character Design"] = Settings().get(cls.name, AniListPerson.CharacterDesign).split(',')
-        cls.person_mapper["Story"] = Settings().get(cls.name, AniListPerson.Story).split(',')
-        cls.person_mapper["Art"] = Settings().get(cls.name, AniListPerson.Art).split(',')
-        cls.person_mapper["Story & Art"] = Settings().get(cls.name, AniListPerson.Story).split(',') + Settings().get(
-            cls.name, AniListPerson.Art).split(',')
-        cls.person_mapper["Assistant"] = Settings().get(cls.name, AniListPerson.Assistant).split(',')
+
     @classmethod
     def _get_id_from_series(cls, cinfo: ComicInfo) -> Optional[int]:
 
@@ -110,47 +150,6 @@ class AniList(IMetadataSource):
         if content is None:
             return None
         return content.get("id")
-
-    @classmethod
-    def get_cinfo(cls, comic_info_from_ui: ComicInfo) -> ComicInfo | None:
-        comicinfo = ComicInfo()
-        serie_id = cls._get_id_from_series(comic_info_from_ui)
-        if serie_id is None:
-            return None
-        data = cls._search_details_by_series_id(serie_id, "MANGA", {})
-
-        startdate = data.get("startDate")
-        comicinfo.day = startdate.get("day")
-        comicinfo.month = startdate.get("month")
-        comicinfo.year = startdate.get("year")
-        comicinfo.genre = ", ".join(data.get("genres")).strip()
-        comicinfo.web = data.get("siteUrl").strip()
-        if data.get("volumes"):
-            comicinfo.count = data.get("volumes")
-
-        # Title (Series & LocalizedSeries)
-        title = data.get("title")
-        cls._log.info("[AniList] Fetch Data found title " + str(title) + " for " + comic_info_from_ui.series)
-        title_english = (data.get("title").get("english") or "").strip()
-        title_romaji = (data.get("title").get("romaji") or "").strip()
-        if cls.romaji_as_series:
-            comicinfo.series = title_romaji
-            if title_romaji != title_english:
-                comicinfo.localized_series = title_english
-        else:
-            comicinfo.series = title_english if title_english != "" else title_romaji
-            if title_romaji != title_english:
-                comicinfo.localized_series = title_romaji
-
-        # Summary
-        comicinfo.summary = IMetadataSource.clean_description(data.get("description"), remove_source=True)
-
-        # People
-        cls.update_people_from_mapping(data["staff"]["edges"], cls.person_mapper, comicinfo,
-                                       lambda item: item["node"]["name"]["full"],
-                                       lambda item: item["role"])
-
-        return comicinfo
 
     @classmethod
     def _post(cls, query, variables, logging_info):
