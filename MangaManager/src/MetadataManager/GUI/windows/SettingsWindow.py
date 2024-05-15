@@ -45,6 +45,9 @@ setting_control_map = {
                                            validate=lambda key, value: '[' + ", ".join(template_validation(
                                                re.findall(r'\{(\w+)\}', value))) + "] are not valid tags" if len(
                                                template_validation(re.findall(r'\{(\w+)\}', value))) != 0 else ""),
+        "move_on_update": SettingControl("move_on_update", "Rename on update",
+                                    SettingControlType.Bool, True,
+                                    "If enabled, files will be renamed according to the Rename Filename template under the Library Path"),  
         "clean_ui_on_drag_drop": SettingControl("remove_old_selection_on_drag_drop","Clean previous selection\non drag and drop", SettingControlType.Bool, True, "After you drag and drop, previous selected files will be discarded")
     },
     SettingHeading.WebpConverter: {

@@ -34,7 +34,7 @@ class AniList(IMetadataSource):
     _log = logging.getLogger()
     # Map the Role from API to the ComicInfo tags to write
     person_mapper = {}
-    _HOW_METADATA_MAPS_TOOLTIP = "How metadata field will map to ComicInfo fields"
+    _HOW_METADATA_MAPS_TOOLTIP = "How metadata field will map to ComicInfo fields"  
     romaji_as_series = Settings().get(name, AniListSetting.SeriesTitleLanguage)
     
     def init_settings(self):
