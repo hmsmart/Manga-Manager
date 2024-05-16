@@ -184,7 +184,7 @@ class LoadedComicInfo(LoadedFileMetadata, LoadedFileCoverData, ILoadedComicInfo)
         try:
             with ArchiveFile(self.file_path, 'r') as zin:
                 assert initial_file_count == len(zin.namelist())
-            # If move_on_update setting is True, we should move the temp file to new location, then delete original file.
+            # If move_on_update setting is True, we should move the temp file to new location, then delete original file when it's path has changed.
             if Settings().get("Main", "move_on_update") == True:
                 template_str = Settings().get("Main", "move_to_template")
                 library_path = Settings().get("Main", "library_path")
@@ -192,7 +192,9 @@ class LoadedComicInfo(LoadedFileMetadata, LoadedFileCoverData, ILoadedComicInfo)
                 new_file_name = self.get_template_filename(template_str)
                 new_file_path = f'{library_path}/{new_file_name}.{original_ext}'
                 os.renames(tmpname, new_file_path)
-                os.remove(self.file_path)
+                # Remove original if the file name was modified
+                if new_file_path != self.file_path:
+                    os.remove(self.file_path)
                 logger.debug(f"[{'Processing':13s}] Moved file to new template filename under library",
                 extra=self._logging_extra)
             else:
