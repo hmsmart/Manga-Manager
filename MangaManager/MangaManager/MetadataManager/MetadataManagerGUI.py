@@ -157,7 +157,7 @@ class GUIApp(Tk, MetadataManagerLib):
         folder_path = askdirectory(initialdir=initial_dir)
         if not folder_path:
             return
-        self.selected_files_path = glob.glob(root_dir=folder_path, pathname=os.path.join(folder_path, "**/*.cbz"),
+        self.selected_files_path = glob.glob(root_dir=folder_path, pathname=os.path.join(glob.escape(folder_path), "**/*.cbz"),
                                              recursive=True)
         # TODO: Auto select recursive or not
         # self.selected_files_path = [str(Path(folder_path, file)) for file in os.listdir(folder_path) if file.endswith(".cbz")]
