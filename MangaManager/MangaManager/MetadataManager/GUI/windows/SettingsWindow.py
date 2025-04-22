@@ -44,7 +44,10 @@ setting_control_map = {
                                                re.findall(r'\{(\w+)\}', value))) + "] are not valid tags" if len(
                                                template_validation(re.findall(r'\{(\w+)\}', value))) != 0 else ""),
         "remove_old_selection_on_drag_drop": SettingControl("remove_old_selection_on_drag_drop","Clean previous selection\non drag and drop", SettingControlType.Bool, True, "After you drag and drop, previous selected files will be discarded"),
-        "darkmode_enabled": SettingControl("darkmode_enabled","Enable darkmode", SettingControlType.Bool,value=False)
+        "darkmode_enabled": SettingControl("darkmode_enabled","Enable darkmode", SettingControlType.Bool,value=False),
+        "move_on_update": SettingControl("move_on_update", "Rename on update",
+                            SettingControlType.Bool, True,
+                            "If enabled, files will be renamed according to the Rename Filename template under the Library Path"),  
     },
     SettingHeading.WebpConverter: {
         "default_base_path": SettingControl("default_base_path", "Default base path", SettingControlType.Text, "",

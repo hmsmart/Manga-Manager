@@ -72,7 +72,12 @@ class LoadedComicInfo(LoadedFileMetadata, LoadedFileCoverData, ILoadedComicInfo)
         :return: None if there's a missing key in the template
         """
         try:
-            return input_template.format_map(self.get_template_values()).replace("  ", " ")
+            illegal_chars = ('<', '>', ':', '"', '\\','/', '|', "?", '*')
+            path_split = input_template.format_map(self.get_template_values()).replace("  ", " ").split('/')
+            sanitized_path_split = []
+            for path_component in path_split:
+                sanitized_path_split.append("".join(ch for ch in path_component if ch.isalnum() or ch not in illegal_chars).strip())
+            return "/".join(sanitized_path_split)
         except KeyError as e:
             logger.error(f"Could not get {list(e.args)} keys when filling template values")
             return None
@@ -178,10 +183,24 @@ class LoadedComicInfo(LoadedFileMetadata, LoadedFileCoverData, ILoadedComicInfo)
         try:
             with ArchiveFile(self.file_path, 'r') as zin:
                 assert initial_file_count == len(zin.namelist())
-            os.remove(self.file_path)
-            os.rename(tmpname, self.file_path)
-            logger.debug(f"[{'Processing':13s}] Successfully deleted old file and named tempfile as the old file",
-                               extra=self._logging_extra)
+          # If move_on_update setting is True, we should move the temp file to new location, then delete original file when it's path has changed.
+            if Settings().get("Main", "move_on_update") == True:
+                template_str = Settings().get("Main", "move_to_template")
+                library_path = Settings().get("Main", "library_path")
+                original_ext = self.file_path.split(".")[-1]
+                new_file_name = self.get_template_filename(template_str)
+                new_file_path = f'{library_path}/{new_file_name}.{original_ext}'
+                os.renames(tmpname, new_file_path)
+                # Remove original if the file name was modified
+                if new_file_path != self.file_path:
+                    os.remove(self.file_path)
+                logger.debug(f"[{'Processing':13s}] Moved file to new template filename under library",
+                extra=self._logging_extra)
+            else:
+                os.remove(self.file_path)
+                os.rename(tmpname, self.file_path)
+                logger.debug(f"[{'Processing':13s}] Successfully deleted old file and named tempfile as the old file",
+                                extra=self._logging_extra)
         # If we fail to delete original file we delete temp file effecively aborting the metadata update
         except PermissionError:
             logger.exception(f"[{'Processing':13s}] Permission error. Aborting and clearing temp files",

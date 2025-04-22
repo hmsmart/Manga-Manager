@@ -17,6 +17,7 @@ default_settings = {
         # {"selected_layout": "default"},
         {"move_to_template": ""},
         {"remove_old_selection_on_drag_drop":True},
+        {"move_on_update": False},
         {"darkmode_enabled":False}
 
     ],
